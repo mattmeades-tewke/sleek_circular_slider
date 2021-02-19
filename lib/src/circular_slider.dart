@@ -24,23 +24,27 @@ class SleekCircularSlider extends StatefulWidget {
   final OnChange onChangeStart;
   final OnChange onChangeEnd;
   final InnerWidget innerWidget;
+
+  final double touchWidth;
+
   static const defaultAppearance = CircularSliderAppearance();
 
   double get angle {
     return valueToAngle(initialValue, min, max, appearance.angleRange);
   }
 
-  const SleekCircularSlider(
-      {Key key,
-      this.initialValue = 50,
-      this.min = 0,
-      this.max = 100,
-      this.appearance = defaultAppearance,
-      this.onChange,
-      this.onChangeStart,
-      this.onChangeEnd,
-      this.innerWidget})
-      : assert(initialValue != null),
+  const SleekCircularSlider({
+    Key key,
+    this.initialValue = 50,
+    this.min = 0,
+    this.max = 100,
+    this.appearance = defaultAppearance,
+    this.onChange,
+    this.onChangeStart,
+    this.onChangeEnd,
+    this.innerWidget,
+    this.touchWidth = 25,
+  })  : assert(initialValue != null),
         assert(min != null),
         assert(max != null),
         assert(min <= max),
@@ -51,8 +55,7 @@ class SleekCircularSlider extends StatefulWidget {
   _SleekCircularSliderState createState() => _SleekCircularSliderState();
 }
 
-class _SleekCircularSliderState extends State<SleekCircularSlider>
-    with SingleTickerProviderStateMixin {
+class _SleekCircularSliderState extends State<SleekCircularSlider> with SingleTickerProviderStateMixin {
   bool _isHandlerSelected;
   bool _animationInProgress = false;
   _CurvePainter _painter;
@@ -66,8 +69,8 @@ class _SleekCircularSliderState extends State<SleekCircularSlider>
   SpinAnimationManager _spinManager;
   ValueChangedAnimationManager _animationManager;
 
-  bool get _interactionEnabled => (widget.onChangeEnd != null ||
-      widget.onChange != null && !widget.appearance.spinnerMode);
+  bool get _interactionEnabled =>
+      (widget.onChangeEnd != null || widget.onChange != null && !widget.appearance.spinnerMode);
 
   @override
   void initState() {
@@ -144,21 +147,16 @@ class _SleekCircularSliderState extends State<SleekCircularSlider>
     if (_painter == null) {
       _setupPainter();
     }
-    return RawGestureDetector(
-        gestures: <Type, GestureRecognizerFactory>{
-          _CustomPanGestureRecognizer:
-              GestureRecognizerFactoryWithHandlers<_CustomPanGestureRecognizer>(
-            () => _CustomPanGestureRecognizer(
-              onPanDown: _onPanDown,
-              onPanUpdate: _onPanUpdate,
-              onPanEnd: _onPanEnd,
-            ),
-            (_CustomPanGestureRecognizer instance) {},
-          ),
-        },
-        child: _buildRotatingPainter(
-            rotation: _rotation,
-            size: Size(widget.appearance.size, widget.appearance.size)));
+    return RawGestureDetector(gestures: <Type, GestureRecognizerFactory>{
+      _CustomPanGestureRecognizer: GestureRecognizerFactoryWithHandlers<_CustomPanGestureRecognizer>(
+        () => _CustomPanGestureRecognizer(
+          onPanDown: _onPanDown,
+          onPanUpdate: _onPanUpdate,
+          onPanEnd: _onPanEnd,
+        ),
+        (_CustomPanGestureRecognizer instance) {},
+      ),
+    }, child: _buildRotatingPainter(rotation: _rotation, size: Size(widget.appearance.size, widget.appearance.size)));
   }
 
   @override
@@ -195,8 +193,7 @@ class _SleekCircularSliderState extends State<SleekCircularSlider>
 
   void _updateOnChange() {
     if (widget.onChange != null && !_animationInProgress) {
-      final value =
-          angleToValue(_currentAngle, widget.min, widget.max, _angleRange);
+      final value = angleToValue(_currentAngle, widget.min, widget.max, _angleRange);
       widget.onChange(value);
     }
   }
@@ -214,19 +211,14 @@ class _SleekCircularSliderState extends State<SleekCircularSlider>
 
   Widget _buildPainter({Size size}) {
     return CustomPaint(
-        painter: _painter,
-        child: Container(
-            width: size.width,
-            height: size.height,
-            child: _buildChildWidget()));
+        painter: _painter, child: Container(width: size.width, height: size.height, child: _buildChildWidget()));
   }
 
   Widget _buildChildWidget() {
     if (widget.appearance.spinnerMode) {
       return null;
     }
-    final value =
-        angleToValue(_currentAngle, widget.min, widget.max, _angleRange);
+    final value = angleToValue(_currentAngle, widget.min, widget.max, _angleRange);
     final childWidget = widget.innerWidget != null
         ? widget.innerWidget(value)
         : SliderLabel(
@@ -249,8 +241,7 @@ class _SleekCircularSliderState extends State<SleekCircularSlider>
   void _onPanEnd(Offset details) {
     _handlePan(details, true);
     if (widget.onChangeEnd != null) {
-      widget.onChangeEnd(
-          angleToValue(_currentAngle, widget.min, widget.max, _angleRange));
+      widget.onChangeEnd(angleToValue(_currentAngle, widget.min, widget.max, _angleRange));
     }
 
     _isHandlerSelected = false;
@@ -262,11 +253,8 @@ class _SleekCircularSliderState extends State<SleekCircularSlider>
     }
     RenderBox renderBox = context.findRenderObject();
     var position = renderBox.globalToLocal(details);
-    final double touchWidth = widget.appearance.progressBarWidth >= 25.0
-        ? widget.appearance.progressBarWidth
-        : 25.0;
-    if (isPointAlongCircle(
-        position, _painter.center, _painter.radius, touchWidth)) {
+    final double touchWidth = widget.appearance.progressBarWidth >= 25.0 ? widget.appearance.progressBarWidth : 25.0;
+    if (isPointAlongCircle(position, _painter.center, _painter.radius, touchWidth)) {
       _selectedAngle = coordinatesToRadians(_painter.center, position);
       // setup painter with new angle values and update onChange
       _setupPainter(counterClockwise: widget.appearance.counterClockwise);
@@ -296,16 +284,13 @@ class _SleekCircularSliderState extends State<SleekCircularSlider>
       return false;
     }
 
-    final double touchWidth = widget.appearance.progressBarWidth >= 25.0
-        ? widget.appearance.progressBarWidth
-        : 25.0;
+    // final double touchWidth = widget.appearance.progressBarWidth >= 25.0 ? widget.appearance.progressBarWidth : 25.0;
+    final double touchWidth = widget.touchWidth;
 
-    if (isPointAlongCircle(
-        position, _painter.center, _painter.radius, touchWidth)) {
+    if (isPointAlongCircle(position, _painter.center, _painter.radius, touchWidth)) {
       _isHandlerSelected = true;
       if (widget.onChangeStart != null) {
-        widget.onChangeStart(
-            angleToValue(_currentAngle, widget.min, widget.max, _angleRange));
+        widget.onChangeStart(angleToValue(_currentAngle, widget.min, widget.max, _angleRange));
       }
       _onPanUpdate(details);
     } else {

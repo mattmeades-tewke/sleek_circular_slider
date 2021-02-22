@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'utils.dart';
 
-typedef void SpinAnimation(
-    double animation1, double animation2, double animation3);
+typedef void SpinAnimation(double animation1, double animation2, double animation3);
 
 class SpinAnimationManager {
   final TickerProvider tickerProvider;
@@ -22,22 +21,17 @@ class SpinAnimationManager {
   AnimationController _animController;
 
   void spin() {
-    _animController = AnimationController(
-        vsync: tickerProvider, duration: duration)
+    _animController = AnimationController(vsync: tickerProvider, duration: duration)
       ..addListener(() {
         spinAnimation(_animation1.value, _animation2.value, _animation3.value);
       })
       ..repeat();
-    _animation1 = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.5, 1.0, curve: Curves.linear)));
-    _animation2 = Tween<double>(begin: -80.0, end: 100.0).animate(
-        CurvedAnimation(
-            parent: _animController,
-            curve: const Interval(0, 1.0, curve: Curves.linear)));
-    _animation3 = Tween(begin: 0.0, end: 360.0).animate(CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.0, 1.0, curve: SpinnerCurve())));
+    _animation1 = Tween(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _animController, curve: const Interval(0.5, 1.0, curve: Curves.linear)));
+    _animation2 = Tween<double>(begin: -80.0, end: 100.0)
+        .animate(CurvedAnimation(parent: _animController, curve: const Interval(0, 1.0, curve: Curves.linear)));
+    _animation3 = Tween(begin: 0.0, end: 360.0)
+        .animate(CurvedAnimation(parent: _animController, curve: const Interval(0.0, 1.0, curve: SpinnerCurve())));
   }
 
   void dispose() {
@@ -79,10 +73,8 @@ class ValueChangedAnimationManager {
       ValueChangeAnimation valueChangedAnimation}) {
     _animationCompleted = false;
 
-    final duration = (durationMultiplier *
-            valueToDuration(
-                initialValue, oldValue ?? minValue, minValue, maxValue))
-        .toInt();
+    final duration =
+        (durationMultiplier * valueToDuration(initialValue, oldValue ?? minValue, minValue, maxValue)).toInt();
     if (_animController == null) {
       _animController = AnimationController(vsync: tickerProvider);
     }
@@ -94,18 +86,68 @@ class ValueChangedAnimationManager {
       curve: Curves.easeOut,
     );
 
-    _animation =
-        Tween<double>(begin: oldAngle ?? 0, end: angle).animate(curvedAnimation)
-          ..addListener(() {
-            valueChangedAnimation(_animation.value, _animationCompleted);
-          })
-          ..addStatusListener((status) {
-            if (status == AnimationStatus.completed) {
-              _animationCompleted = true;
+    _animation = Tween<double>(begin: oldAngle ?? 0, end: angle).animate(curvedAnimation)
+      ..addListener(() {
+        valueChangedAnimation(_animation.value, _animationCompleted);
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _animationCompleted = true;
 
-              _animController.reset();
-            }
-          });
+          _animController.reset();
+        }
+      });
+    _animController.forward();
+  }
+
+  void dispose() {
+    _animController.dispose();
+  }
+}
+
+// New function to fade between colours, based on ValueChangedAnimationManager
+
+typedef void ColorChangeAnimation(Color animationColor, bool animationFinished);
+
+class ColorChangedAnimationManager {
+  final TickerProvider tickerProvider;
+  final int duration;
+
+  ColorChangedAnimationManager({
+    @required this.tickerProvider,
+    this.duration = 200,
+  });
+
+  Animation<Color> _animation;
+  bool _animationCompleted = false;
+  AnimationController _animController;
+
+  void animate({
+    Color color1,
+    Color color2,
+    ColorChangeAnimation colorChangeAnimation,
+  }) {
+    _animationCompleted = false;
+
+    _animController = AnimationController(
+      vsync: tickerProvider,
+      duration: Duration(milliseconds: duration),
+    );
+
+    _animation = ColorTween(
+      begin: color1,
+      end: color2,
+    ).animate(_animController)
+      ..addListener(() {
+        colorChangeAnimation(_animation.value, _animationCompleted);
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _animationCompleted = true;
+
+          _animController.reset();
+        }
+      });
     _animController.forward();
   }
 

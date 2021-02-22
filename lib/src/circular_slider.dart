@@ -25,15 +25,26 @@ class SleekCircularSlider extends StatefulWidget {
   final OnChange onChangeEnd;
   final InnerWidget innerWidget;
 
+  // New variable, defines the 'hot area' that the user can grab on the slider
+  // Can be set to zero if user interaction isn't required
   final double touchWidth;
 
-  static const defaultAppearance = CircularSliderAppearance();
+  // Defines the duration of the secondary animation in milliseconds - if < 0 (default), then secondary
+  // animation is disabled
+  final int secondaryAnimDuration;
+
+  // Define the list of colors to fade between, [0] is starting colour, [1] is end colour
+  final List<Color> secondaryAnimColors;
+
+  // Changed from static to const - need to modify the progress bar colour
+  static var defaultAppearance = CircularSliderAppearance();
 
   double get angle {
     return valueToAngle(initialValue, min, max, appearance.angleRange);
   }
 
-  const SleekCircularSlider({
+  // No longer const
+  SleekCircularSlider({
     Key key,
     this.initialValue = 50,
     this.min = 0,
@@ -44,12 +55,15 @@ class SleekCircularSlider extends StatefulWidget {
     this.onChangeEnd,
     this.innerWidget,
     this.touchWidth = 25,
+    this.secondaryAnimDuration = -1,
+    this.secondaryAnimColors,
   })  : assert(initialValue != null),
         assert(min != null),
         assert(max != null),
         assert(min <= max),
         assert(initialValue >= min && initialValue <= max),
         assert(appearance != null),
+        assert(secondaryAnimColors == null || secondaryAnimColors.length == 2),
         super(key: key);
   @override
   _SleekCircularSliderState createState() => _SleekCircularSliderState();
@@ -68,6 +82,19 @@ class _SleekCircularSliderState extends State<SleekCircularSlider> with SingleTi
   double _rotation;
   SpinAnimationManager _spinManager;
   ValueChangedAnimationManager _animationManager;
+
+  // Create animation manager (defined in 'slider_animations.dart')
+  ColorChangedAnimationManager _colorChangedAnimationManager;
+
+  // Takes the input from widget and stores the colours that the fade animation moves between
+  List<Color> _secondaryAnimColors;
+
+  // When fading out, need to keep track of initial angle so that the progress
+  // bar can be held there while it fades out
+  double _storedAngle;
+
+  // Toggle this on/off to tell other functions it is currently fading out
+  bool _fadingOut = false;
 
   bool get _interactionEnabled =>
       (widget.onChangeEnd != null || widget.onChange != null && !widget.appearance.spinnerMode);
@@ -107,22 +134,73 @@ class _SleekCircularSliderState extends State<SleekCircularSlider> with SingleTi
         durationMultiplier: widget.appearance.animDurationMultiplier,
       );
     }
-    _animationManager.animate(
-        initialValue: widget.initialValue,
-        angle: widget.angle,
-        oldAngle: _oldWidgetAngle,
-        oldValue: _oldWidgetValue,
-        valueChangedAnimation: ((double anim, bool animationCompleted) {
-          _animationInProgress = !animationCompleted;
-          setState(() {
-            if (!animationCompleted) {
-              _currentAngle = anim;
-              // update painter and the on change closure
-              _setupPainter();
-              _updateOnChange();
-            }
-          });
-        }));
+
+    // Instantiates the animation manager & sets the animation colours if not already set
+    if (_colorChangedAnimationManager == null && widget.secondaryAnimDuration >= 0) {
+      _colorChangedAnimationManager = ColorChangedAnimationManager(
+        tickerProvider: this,
+        duration: widget.secondaryAnimDuration,
+      );
+      if (widget.secondaryAnimColors == null) {
+        // Colours default from progress bar back to track colour
+        _secondaryAnimColors = [
+          widget.appearance.customColors.progressBarColor,
+          widget.appearance.trackColor,
+        ];
+      } else {
+        _secondaryAnimColors = widget.secondaryAnimColors;
+      }
+    }
+
+    // Save stored angle as the previous widget angle
+    _storedAngle = _oldWidgetAngle;
+
+    //// MAIN NEW MODIFICATION
+    // Instead of animating the progress bar back to 0 when the button is turned off, this
+    // fades out the line instead if:
+    // --- new angle == 0 (button has been pressed to turn the lights off) AND
+    // --- the stored angle != null (this is so that the animation isn't run on startup)
+    // --- the animation duration >= 0 (otherwise the animation is disabled and the original
+    //     code in the else block is run)
+    if (widget.angle == 0 && _storedAngle != null && widget.secondaryAnimDuration >= 0) {
+      _fadingOut = true;
+      _colorChangedAnimationManager.animate(
+          color1: _secondaryAnimColors[0],
+          color2: _secondaryAnimColors[1],
+          colorChangeAnimation: ((Color animColor, bool animationCompleted) {
+            setState(() {
+              if (!animationCompleted) {
+                widget.appearance.customColors.progressBarColor = animColor;
+                // Set current angle to stored angle so progress bar holds in place while fading out
+                _currentAngle = _storedAngle;
+                // update painter and the on change closure
+                _setupPainter();
+                _updateOnChange();
+              } else {
+                _fadingOut = false;
+                _currentAngle = 0;
+              }
+            });
+          }));
+      // Standard animation
+    } else {
+      _animationManager.animate(
+          initialValue: widget.initialValue,
+          angle: widget.angle,
+          oldAngle: _oldWidgetAngle,
+          oldValue: _oldWidgetValue,
+          valueChangedAnimation: ((double anim, bool animationCompleted) {
+            _animationInProgress = !animationCompleted;
+            setState(() {
+              if (!animationCompleted) {
+                _currentAngle = anim;
+                // update painter and the on change closure
+                _setupPainter();
+                _updateOnChange();
+              }
+            });
+          }));
+    }
   }
 
   void _spin() {
@@ -175,12 +253,17 @@ class _SleekCircularSliderState extends State<SleekCircularSlider> with SingleTi
       }
     }
 
-    _currentAngle = calculateAngle(
-        startAngle: _startAngle,
-        angleRange: _angleRange,
-        selectedAngle: _selectedAngle,
-        defaultAngle: defaultAngle,
-        counterClockwise: counterClockwise);
+    // If using fade out animation, don't need function to calculate angle
+    // --- Causes button to flash if not taken out because it jumps to 0, then
+    //     back to previous value
+    if (!_fadingOut) {
+      _currentAngle = calculateAngle(
+          startAngle: _startAngle,
+          angleRange: _angleRange,
+          selectedAngle: _selectedAngle,
+          defaultAngle: defaultAngle,
+          counterClockwise: counterClockwise);
+    }
 
     _painter = _CurvePainter(
         startAngle: _startAngle,

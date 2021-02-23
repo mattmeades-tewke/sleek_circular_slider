@@ -36,8 +36,9 @@ class SleekCircularSlider extends StatefulWidget {
   // Define the list of colors to fade between, [0] is starting colour, [1] is end colour
   final List<Color> secondaryAnimColors;
 
-  // Changed from static to const - need to modify the progress bar colour
-  static var defaultAppearance = CircularSliderAppearance();
+  // Changed from static to var - need to modify the progress bar colour
+  // COMMENTED OUT - User now needs to provide an appearance variable
+  // static var defaultAppearance = CircularSliderAppearance();
 
   double get angle {
     return valueToAngle(initialValue, min, max, appearance.angleRange);
@@ -49,7 +50,7 @@ class SleekCircularSlider extends StatefulWidget {
     this.initialValue = 50,
     this.min = 0,
     this.max = 100,
-    this.appearance = defaultAppearance,
+    @required this.appearance = null,
     this.onChange,
     this.onChangeStart,
     this.onChangeEnd,
@@ -62,14 +63,13 @@ class SleekCircularSlider extends StatefulWidget {
         assert(max != null),
         assert(min <= max),
         assert(initialValue >= min && initialValue <= max),
-        assert(appearance != null),
         assert(secondaryAnimColors == null || secondaryAnimColors.length == 2),
         super(key: key);
   @override
   _SleekCircularSliderState createState() => _SleekCircularSliderState();
 }
 
-class _SleekCircularSliderState extends State<SleekCircularSlider> with SingleTickerProviderStateMixin {
+class _SleekCircularSliderState extends State<SleekCircularSlider> with TickerProviderStateMixin {
   bool _isHandlerSelected;
   bool _animationInProgress = false;
   _CurvePainter _painter;

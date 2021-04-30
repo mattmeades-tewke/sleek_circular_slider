@@ -35,7 +35,7 @@ class SpinAnimationManager {
   }
 
   void dispose() {
-    _animController.dispose();
+    _animController?.dispose();
   }
 }
 
@@ -101,7 +101,7 @@ class ValueChangedAnimationManager {
   }
 
   void dispose() {
-    _animController.dispose();
+    _animController?.dispose();
   }
 }
 
@@ -152,6 +152,6 @@ class ColorChangedAnimationManager {
   }
 
   void dispose() {
-    _animController.dispose();
+    _animController?.dispose();
   }
 }

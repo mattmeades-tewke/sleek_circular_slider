@@ -96,6 +96,9 @@ class _SleekCircularSliderState extends State<SleekCircularSlider> with TickerPr
   // Toggle this on/off to tell other functions it is currently fading out
   bool _fadingOut = false;
 
+  // Set to false at start so that button doesn't run the animation when the screen loads
+  bool _initialising = true;
+
   bool get _interactionEnabled =>
       (widget.onChangeEnd != null || widget.onChange != null && !widget.appearance.spinnerMode);
 
@@ -121,6 +124,11 @@ class _SleekCircularSliderState extends State<SleekCircularSlider> with TickerPr
   }
 
   void _animate() {
+    if (_initialising) {
+      _initialising = false;
+      return;
+    }
+
     if (!widget.appearance.animationEnabled || widget.appearance.spinnerMode) {
       _setupPainter();
       _updateOnChange();

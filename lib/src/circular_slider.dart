@@ -249,6 +249,7 @@ class _SleekCircularSliderState extends State<SleekCircularSlider> with TickerPr
   void dispose() {
     if (_spinManager != null) _spinManager.dispose();
     if (_animationManager != null) _animationManager.dispose();
+    if (_colorChangedAnimationManager != null) _colorChangedAnimationManager.dispose();
     super.dispose();
   }
 
